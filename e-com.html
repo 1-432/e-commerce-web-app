@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechMart Kenya - E-Commerce Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.3/cdn.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#FF6B35',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                    }
+                }
+            },
+            darkMode: 'class'
+        }
+    </script>
+    <style>
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        .slide-up { animation: slideUp 0.3s ease-out; }
+        .bounce-in { animation: bounceIn 0.6s ease-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .product-image {
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-image {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div x-data="ecommerceApp()" x-init="init()" class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50 transition-colors duration-300">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <!-- Logo -->
+                    <div class="flex items-center cursor-pointer" @click="currentView = 'home'">
+                        <i class="fas fa-store text-primary text-2xl mr-3"></i>
+                        <span class="text-xl font-bold text-gray-900 dark:text-white">TechMart Kenya</span>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="hidden md:block flex-1 max-w-lg mx-8">
+                        <div class="relative">
+                            <input type="text" 
+                                   x-model="searchQuery" 
+                                   @input="searchProducts()"
+                                   placeholder="Search products..." 
+                                   class="w-full px-4 py-2 pl-10 pr-4 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Links -->
+                    <div class="flex items-center space-x-6">
+                        <button @click="currentView = 'home'" 
+                                :class="{'text-primary': currentView === 'home'}"
+                                class="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </button>
+                        
+                        <button @click="currentView = 'products'" 
+                                :class="{'text-primary': currentView === 'products'}"
+                                class="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+                            <i class="fas fa-shopping-bag mr-1"></i> Products
+                        </button>
+
+                        <!-- Cart -->
+                        <button @click="currentView = 'cart'" 
+                                class="relative text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+                            <i class="fas fa-shopping-cart text-xl"></i>
+                            <span x-show="cartItems.length > 0" 
+                                  x-text="cartItems.length"
+                                  class="absolute -top-2 -right-2 bg-danger text-white text-xs rounded-full h-5 w-5 flex items-center justify-center bounce-in">
+                            </span>
+                        </button>
+
+                        <!-- User Menu -->
+                        <div x-data="{ open: false }" class="relative">
+                            <button @click="open = !open" 
+                                    class="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+                                <i class="fas fa-user-circle text-xl"></i>
+                                <span x-text="user ? user.name : 'Account'" class="ml-1 hidden sm:inline"></span>
+                            </button>
+                            
+                            <div x-show="open" 
+                                 @click.away="open = false"
+                                 x-transition
+                                 class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50">
+                                <template x-if="!user">
+                                    <div>
+                                        <button @click="showLogin = true; open = false" 
+                                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
+                                            <i class="fas fa-sign-in-alt mr-2"></i> Login
+                                        </button>
+                                        <button @click="showRegister = true; open = false" 
+                                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
+                                            <i class="fas fa-user-plus mr-2"></i> Register
+                                        </button>
+                                    </div>
+                                </template>
+                                
+                                <template x-if="user">
+                                    <div>
+                                        <button @click="currentView = 'orders'; open = false" 
+                                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
+                                            <i class="fas fa-box mr-2"></i> My Orders
+                                        </button>
+                                        <template x-if="user && user.role === 'admin'">
+                                            <button @click="currentView = 'admin'; open = false" 
+                                                    class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
+                                                <i class="fas fa-cog mr-2"></i> Admin Panel
+                                            </button>
+                                        </template>
+                                        <hr class="my-1">
+                                        <button @click="logout(); open = false" 
+                                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
+                                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="min-h-screen">
+            <!-- Home View -->
+            <div x-show="currentView === 'home'" class="fade-in">
+                <!-- Hero Section -->
+                <section class="relative bg-gradient-to-r from-primary to-purple-600 text-white py-20">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="text-center">
+                            <h1 class="text-4xl md:text-6xl font-bold mb-6">Welcome to TechMart Kenya</h1>
+                            <p class="text-xl mb-8 opacity-90">Your premier destination for cutting-edge technology</p>
+                            <button @click="currentView = 'products'" 
+                                    class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors transform hover:scale-105">
+                                Shop Now
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Featured Categories -->
+                <section class="py-16 bg-white dark:bg-gray-800">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">Featured Categories</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <template x-for="category in categories" :key="category.id">
+                                <div @click="filterByCategory(category.name)" 
+                                     class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center cursor-pointer hover:shadow-lg transition-all transform hover:scale-105">
+                                    <i :class="category.icon" class="text-4xl text-primary mb-4"></i>
+                                    <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white" x-text="category.name"></h3>
+                                    <p class="text-gray-600 dark:text-gray-400" x-text="category.description"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Featured Products -->
+                <section class="py-16 bg-gray-50 dark:bg-gray-900">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <h2 class="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">Featured Products</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <template x-for="product in products.slice(0, 4)" :key="product.id">
+                                <div class="product-card bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
+                                    <div class="h-48 overflow-hidden">
+                                        <img :src="product.image" :alt="product.name" class="w-full h-full product-image">
+                                    </div>
+                                    <div class="p-4">
+                                        <h3 class="font-semibold text-lg mb-2 text-gray-900 dark:text-white" x-text="product.name"></h3>
+                                        <p class="text-gray-600 dark:text-gray-400 text-sm mb-3" x-text="product.description"></p>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-2xl font-bold text-primary" x-text="'KSh ' + product.price.toLocaleString()"></span>
+                                            <button @click="addToCart(product)" 
+                                                    class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                                                Add to Cart
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Products View -->
+            <div x-show="currentView === 'products'" class="py-8 fade-in">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex flex-col lg:flex-row gap-8">
+                        <!-- Filters Sidebar -->
+                        <div class="lg:w-1/4">
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 sticky top-24">
+                                <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Filters</h3>
+                                
+                                <!-- Category Filter -->
+                                <div class="mb-6">
+                                    <h4 class="font-medium mb-3 text-gray-700 dark:text-gray-300">Categories</h4>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" x-model="selectedCategory" value="" class="mr-2">
+                                            <span class="text-gray-600 dark:text-gray-400">All Categories</span>
+                                        </label>
+                                        <template x-for="category in categories" :key="category.id">
+                                            <label class="flex items-center">
+                                                <input type="radio" x-model="selectedCategory" :value="category.name" class="mr-2">
+                                                <span class="text-gray-600 dark:text-gray-400" x-text="category.name"></span>
+                                            </label>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Price Filter -->
+                                <div class="mb-6">
+                                    <h4 class="font-medium mb-3 text-gray-700 dark:text-gray-300">Price Range</h4>
+                                    <div class="space-y-2">
+                                        <input type="range" x-model="priceRange.max" min="0" max="500000" step="1000" 
+                                               class="w-full">
+                                        <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                                            <span>KSh 0</span>
+                                            <span x-text="'KSh ' + priceRange.max.toLocaleString()"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button @click="applyFilters()" 
+                                        class="w-full bg-primary text-white py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                                    Apply Filters
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Products Grid -->
+                        <div class="lg:w-3/4">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Products</h2>
+                                <select x-model="sortBy" @change="sortProducts()" 
+                                        class="border border-gray-300 rounded-lg px-3 py-2 text-base dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <option value="name">Sort by Name</option>
+                                    <option value="price-low">Price: Low to High</option>
+                                    <option value="price-high">Price: High to Low</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <template x-for="product in filteredProducts" :key="product.id">
+                                    <div class="product-card bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all transform hover:scale-105">
+                                        <div class="h-48 overflow-hidden relative">
+                                            <img :src="product.image" :alt="product.name" class="w-full h-full product-image">
+                                            <span x-show="product.stock < 5" 
+                                                  class="absolute top-2 right-2 bg-warning text-white text-xs px-2 py-1 rounded">
+                                                Low Stock
+                                            </span>
+                                        </div>
+                                        <div class="p-4">
+                                            <h3 class="font-semibold text-lg mb-2 text-gray-900 dark:text-white" x-text="product.name"></h3>
+                                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-3" x-text="product.description"></p>
+                                            <div class="flex justify-between items-center mb-3">
+                                                <span class="text-2xl font-bold text-primary" x-text="'KSh ' + product.price.toLocaleString()"></span>
+                                                <span class="text-sm text-gray-500 dark:text-gray-400" x-text="product.stock + ' in stock'"></span>
+                                            </div>
+                                            <button @click="addToCart(product)" 
+                                                    :disabled="product.stock === 0"
+                                                    :class="product.stock === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-purple-600'"
+                                                    class="w-full text-white px-4 py-2 rounded-lg transition-colors">
+                                                <span x-text="product.stock === 0 ? 'Out of Stock' : 'Add to Cart'"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div x-show="filteredProducts.length === 0" class="text-center py-12">
+                                <i class="fas fa-search text-6xl text-gray-400 mb-4"></i>
+                                <p class="text-xl text-gray-600 dark:text-gray-400">No products found</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart View -->
+            <div x-show="currentView === 'cart'" class="py-8 fade-in">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Shopping Cart</h2>
+                    
+                    <div x-show="cartItems.length === 0" class="text-center py-12">
+                        <i class="fas fa-shopping-cart text-6xl text-gray-400 mb-4"></i>
+                        <p class="text-xl text-gray-600 dark:text-gray-400 mb-4">Your cart is empty</p>
+                        <button @click="currentView = 'products'" 
+                                class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition-colors">
+                            Continue Shopping
+                        </button>
+                    </div>
+
+                    <div x-show="cartItems.length > 0">
+                        <div class="space-y-4 mb-8">
+                            <template x-for="item in cartItems" :key="item.id">
+                                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex items-center justify-between">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
+                                            <img :src="item.image" :alt="item.name" class="w-full h-full object-cover">
+                                        </div>
+                                        <div>
+                                            <h3 class="font-semibold text-gray-900 dark:text-white" x-text="item.name"></h3>
+                                            <p class="text-gray-600 dark:text-gray-400" x-text="'KSh ' + item.price.toLocaleString()"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-4">
+                                        <div class="flex items-center space-x-2">
+                                            <button @click="updateQuantity(item.id, item.quantity - 1)" 
+                                                    class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600">
+                                                <i class="fas fa-minus text-xs"></i>
+                                            </button>
+                                            <span class="w-8 text-center font-semibold text-gray-900 dark:text-white" x-text="item.quantity"></span>
+                                            <button @click="updateQuantity(item.id, item.quantity + 1)" 
+                                                    class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600">
+                                                <i class="fas fa-plus text-xs"></i>
+                                            </button>
+                                        </div>
+                                        <span class="font-bold text-primary w-24 text-right" x-text="'KSh ' + (item.price * item.quantity).toLocaleString()"></span>
+                                        <button @click="removeFromCart(item.id)" 
+                                                class="text-danger hover:text-red-700 transition-colors">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Cart Summary -->
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Order Summary</h3>
+                            <div class="space-y-2 mb-4">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600 dark:text-gray-400">Subtotal</span>
+                                    <span class="text-gray-900 dark:text-white" x-text="'KSh ' + getCartTotal().toLocaleString()"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600 dark:text-gray-400">Shipping</span>
+                                    <span class="text-gray-900 dark:text-white">KSh 500</span>
+                                </div>
+                                <hr class="my-2">
+                                <div class="flex justify-between font-bold text-lg">
+                                    <span class="text-gray-900 dark:text-white">Total</span>
+                                    <span class="text-primary" x-text="'KSh ' + (getCartTotal() + 500).toLocaleString()"></span>
+                                </div>
+                            </div>
+                            <button @click="proceedToCheckout()" 
+                                    class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-600 transition-colors font-semibold">
+                                Proceed to Checkout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders View -->
+            <div x-show="currentView === 'orders'" class="py-8 fade-in">
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">My Orders</h2>
+                    
+                    <div x-show="orders.length === 0" class="text-center py-12">
+                        <i class="fas fa-box-open text-6xl text-gray-400 mb-4"></i>
+                        <p class="text-xl text-gray-600 dark:text-gray-400">No orders found</p>
+                    </div>
+
+                    <div class="space-y-6">
+                        <template x-for="order in orders" :key="order.id">
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 class="font-semibold text-lg text-gray-900 dark:text-white" x-text="'Order #' + order.id"></h3>
+                                        <p class="text-gray-600 dark:text-gray-400" x-text="new Date(order.date).toLocaleDateString()"></p>
+                                    </div>
+                                    <span :class="{
+                                        'bg-warning text-white': order.status === 'pending',
+                                        'bg-primary text-white': order.status === 'processing',
+                                        'bg-success text-white': order.status === 'delivered',
+                                        'bg-danger text-white': order.status === 'cancelled'
+                                    }" class="px-3 py-1 rounded-full text-sm font-medium capitalize" x-text="order.status"></span>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <h4 class="font-medium mb-2 text-gray-700 dark:text-gray-300">Items</h4>
+                                        <template x-for="item in order.items" :key="item.id">
+                                            <p class="text-sm text-gray-600 dark:text-gray-400" x-text="item.name + ' x' + item.quantity"></p>
+                                        </template>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium mb-2 text-gray-700 dark:text-gray-300">Total</h4>
+                                        <p class="text-lg font-bold text-primary" x-text="'KSh ' + order.total.toLocaleString()"></p>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium mb-2 text-gray-700 dark:text-gray-300">Delivery Address</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400" x-text="order.address"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div x-show="currentView === 'admin'" class="py-8 fade-in">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Admin Panel</h2>
+                    
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400">Total Products</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white" x-text="products.length"></p>
+                                </div>
+                                <i class="fas fa-box text-3xl text-primary"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400">Total Orders</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white" x-text="orders.length"></p>
+                                </div>
+                                <i class="fas fa-shopping-cart text-3xl text-success"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400">Revenue</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white" x-text="'KSh ' + getTotalRevenue().toLocaleString()"></p>
+                                </div>
+                                <i class="fas fa-chart-line text-3xl text-warning"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400">Low Stock Items</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white" x-text="products.filter(p => p.stock < 5).length"></p>
+                                </div>
+                                <i class="fas fa-exclamation-triangle text-3xl text-danger"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Tabs -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+                        <div class="border-b border-gray-200 dark:border-gray-700">
+                            <nav class="flex">
+                                <button @click="adminTab = 'products'" 
+                                        :class="{'border-primary text-primary': adminTab === 'products'}"
+                                        class="px-6 py-3 border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">
+                                    Product Management
+                                </button>
+                                <button @click="adminTab = 'orders'" 
+                                        :class="{'border-primary text-primary': adminTab === 'orders'}"
+                                        class="px-6 py-3 border-b-2 border-transparent text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">
+                                    Order Management
+                                </button>
+                            </nav>
+                        </div>
+
+                        <!-- Product Management -->
+                        <div x-show="adminTab === 'products'" class="p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Products</h3>
+                                <button @click="showAddProduct = true" 
+                                        class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                                    <i class="fas fa-plus mr-2"></i> Add Product
+                                </button>
+                            </div>
+                            
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead class="border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th class="py-3 text-gray-900 dark:text-white">Image</th>
+                                            <th class="py-3 text-gray-900 dark:text-white">Name</th>
+                                            <th class="py-3 text-gray-900 dark:text-white">Category</th>
+                                            <th class="py-3 text-gray-900 dark:text-white">Price</th>
+                                            <th class="py-3 text-gray-900 dark:text-white">Stock</th>
+                                            <th class="py-3 text-gray-900 dark:text-white">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="product in products" :key="product.id">
+                                            <tr class="border-b border-gray-100 dark:border-gray-700">
+                                                <td class="py-3">
+                                                    <img :src="product.image" :alt="product.name" class="w-12 h-12 object-cover rounded">
+                                                </td>
+                                                <td class="py-3 text-gray-900 dark:text-white" x-text="product.name"></td>
+                                                <td class="py-3 text-gray-600 dark:text-gray-400" x-text="product.category"></td>
+                                                <td class="py-3 text-gray-900 dark:text-white" x-text="'KSh ' + product.price.toLocaleString()"></td>
+                                                <td class="py-3" :class="product.stock < 5 ? 'text-danger' : 'text-gray-900 dark:text-white'" x-text="product.stock"></td>
+                                                <td class="py-3">
+                                                    <button @click="editProduct(product)" class="text-primary hover:text-purple-600 mr-3">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button @click="deleteProduct(product.id)" class="text-danger hover:text-red-700">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Order Management -->
+                        <div x-show="adminTab === 'orders'" class="p-6">
+                            <h3 class="text-lg font-semibold mb-6 text-gray-900 dark:text-white">Orders</h3>
+                            
+                            <div class="space-y-4">
+                                <template x-for="order in orders" :key="order.id">
+                                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <h4 class="font-semibold text-gray-900 dark:text-white" x-text="'Order #' + order.id"></h4>
+                                                <p class="text-gray-600 dark:text-gray-400" x-text="new Date(order.date).toLocaleDateString()"></p>
+                                                <p class="text-gray-600 dark:text-gray-400" x-text="'Customer: ' + order.customer"></p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="font-bold text-primary" x-text="'KSh ' + order.total.toLocaleString()"></p>
+                                                <select @change="updateOrderStatus(order.id, $event.target.value)" 
+                                                        :value="order.status"
+                                                        class="mt-2 border border-gray-300 rounded px-2 py-1 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                                    <option value="pending">Pending</option>
+                                                    <option value="processing">Processing</option>
+                                                    <option value="delivered">Delivered</option>
+                                                    <option value="cancelled">Cancelled</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-900 text-white py-12 mt-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                    <!-- Company Info -->
+                    <div class="md:col-span-2">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-store text-primary text-2xl mr-3"></i>
+                            <span class="text-xl font-bold">TechMart Kenya</span>
+                        </div>
+                        <p class="text-gray-400 mb-4">Your premier destination for cutting-edge technology. We provide the latest laptops, smartphones, and accessories with exceptional customer service.</p>
+                        <div class="flex space-x-4">
+                            <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+                                <i class="fab fa-facebook text-xl"></i>
+                            </a>
+                            <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+                                <i class="fab fa-twitter text-xl"></i>
+                            </a>
+                            <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+                                <i class="fab fa-instagram text-xl"></i>
+                            </a>
+                            <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+                                <i class="fab fa-linkedin text-xl"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Links -->
+                    <div>
+                        <h4 class="text-lg font-semibold mb-4">Quick Links</h4>
+                        <ul class="space-y-2">
+                            <li><a href="#" class="text-gray-400 hover:text-primary transition-colors">About Us</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-primary transition-colors">Contact</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-primary transition-colors">Support</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-primary transition-colors">Shipping Info</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-primary transition-colors">Returns</a></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Customer Service -->
+                    <div>
+                        <h4 class="text-lg font-semibold mb-4">Customer Service</h4>
+                        <ul class="space-y-2">
+                            <li class="text-gray-400">
+                                <i class="fas fa-phone mr-2"></i>
+                                +254 700 123 456
+                            </li>
+                            <li class="text-gray-400">
+                                <i class="fas fa-envelope mr-2"></i>
+                                info@techmart.co.ke
+                            </li>
+                            <li class="text-gray-400">
+                                <i class="fas fa-map-marker-alt mr-2"></i>
+                                Nairobi, Kenya
+                            </li>
+                            <li class="text-gray-400">
+                                <i class="fas fa-clock mr-2"></i>
+                                Mon-Fri: 8AM-6PM
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Copyright -->
+                <div class="border-t border-gray-800 pt-8">
+                    <div class="flex flex-col md:flex-row justify-between items-center">
+                        <p class="text-gray-400 text-sm mb-4 md:mb-0">
+                            © 2024 <span class="text-primary font-semibold">Dominic&Co Limited Company</span>. All rights reserved.
+                        </p>
+                        <div class="flex space-x-6 text-sm">
+                            <a href="#" class="text-gray-400 hover:text-primary transition-colors">Privacy Policy</a>
+                            <a href="#" class="text-gray-400 hover:text-primary transition-colors">Terms of Service</a>
+                            <a href="#" class="text-gray-400 hover:text-primary transition-colors">Cookie Policy</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Modals -->
+        <!-- Login Modal -->
+        <div x-show="showLogin" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showLogin = false">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 slide-up">
+                <h3 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Login</h3>
+                <form @submit.prevent="login()">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Email</label>
+                        <input type="email" x-model="loginForm.email" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Password</label>
+                        <input type="password" x-model="loginForm.password" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="flex justify-between">
+                        <button type="button" @click="showLogin = false" 
+                                class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                            Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Register Modal -->
+        <div x-show="showRegister" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showRegister = false">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 slide-up">
+                <h3 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Register</h3>
+                <form @submit.prevent="register()">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Name</label>
+                        <input type="text" x-model="registerForm.name" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Email</label>
+                        <input type="email" x-model="registerForm.email" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Password</label>
+                        <input type="password" x-model="registerForm.password" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="flex justify-between">
+                        <button type="button" @click="showRegister = false" 
+                                class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                            Register
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Product Modal -->
+        <div x-show="showAddProduct" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showAddProduct = false">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 slide-up">
+                <h3 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Add Product</h3>
+                <form @submit.prevent="addProduct()">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Name</label>
+                        <input type="text" x-model="productForm.name" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Category</label>
+                        <select x-model="productForm.category" required 
+                                class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <option value="">Select Category</option>
+                            <template x-for="category in categories" :key="category.id">
+                                <option :value="category.name" x-text="category.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Price (KSh)</label>
+                        <input type="number" x-model="productForm.price" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Stock</label>
+                        <input type="number" x-model="productForm.stock" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Image URL</label>
+                        <input type="url" x-model="productForm.image" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Description</label>
+                        <textarea x-model="productForm.description" required 
+                                  class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                    </div>
+                    <div class="flex justify-between">
+                        <button type="button" @click="showAddProduct = false" 
+                                class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                            Add Product
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Checkout Modal -->
+        <div x-show="showCheckout" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCheckout = false">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 slide-up">
+                <h3 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Checkout</h3>
+                <form @submit.prevent="completeOrder()">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Full Name</label>
+                        <input type="text" x-model="checkoutForm.name" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Phone</label>
+                        <input type="tel" x-model="checkoutForm.phone" required 
+                               class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Delivery Address</label>
+                        <textarea x-model="checkoutForm.address" required 
+                                  class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Payment Method</label>
+                        <select x-model="checkoutForm.payment" required 
+                                class="w-full px-3 py-2 text-base border rounded-lg focus:ring-2 focus:ring-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <option value="">Select Payment Method</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="cod">Cash on Delivery</option>
+                        </select>
+                    </div>
+                    <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div class="flex justify-between mb-2">
+                            <span class="text-gray-600 dark:text-gray-400">Subtotal:</span>
+                            <span class="text-gray-900 dark:text-white" x-text="'KSh ' + getCartTotal().toLocaleString()"></span>
+                        </div>
+                        <div class="flex justify-between mb-2">
+                            <span class="text-gray-600 dark:text-gray-400">Shipping:</span>
+                            <span class="text-gray-900 dark:text-white">KSh 500</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-lg">
+                            <span class="text-gray-900 dark:text-white">Total:</span>
+                            <span class="text-primary" x-text="'KSh ' + (getCartTotal() + 500).toLocaleString()"></span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between">
+                        <button type="button" @click="showCheckout = false" 
+                                class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                            Place Order
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Success Toast -->
+        <div x-show="showToast" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform translate-y-2"
+             x-transition:enter-end="opacity-100 transform translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform translate-y-0"
+             x-transition:leave-end="opacity-0 transform translate-y-2"
+             class="fixed bottom-4 right-4 bg-success text-white px-6 py-3 rounded-lg shadow-lg z-50">
+            <div class="flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>
+                <span x-text="toastMessage"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        function ecommerceApp() {
+            return {
+                // State
+                currentView: 'home',
+                adminTab: 'products',
+                user: null,
+                cartItems: [],
+                orders: [],
+                searchQuery: '',
+                selectedCategory: '',
+                sortBy: 'name',
+                priceRange: { max: 500000 },
+                
+                // Modals
+                showLogin: false,
+                showRegister: false,
+                showAddProduct: false,
+                showCheckout: false,
+                showToast: false,
+                toastMessage: '',
+
+                // Forms
+                loginForm: { email: '', password: '' },
+                registerForm: { name: '', email: '', password: '' },
+                productForm: { name: '', category: '', price: '', stock: '', description: '', image: '' },
+                checkoutForm: { name: '', phone: '', address: '', payment: '' },
+
+                // Data
+                categories: [
+                    { id: 1, name: 'Laptops', icon: 'fas fa-laptop', description: 'High-performance laptops for work and gaming' },
+                    { id: 2, name: 'Smartphones', icon: 'fas fa-mobile-alt', description: 'Latest smartphones with cutting-edge features' },
+                    { id: 3, name: 'Accessories', icon: 'fas fa-headphones', description: 'Tech accessories and peripherals' }
+                ],
+
+                products: [
+                    { id: 1, name: 'MacBook Pro M3', category: 'Laptops', price: 88000, stock: 15, description: 'Apple MacBook Pro with M3 chip, 16GB RAM, 512GB SSD', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&h=400&fit=crop' },
+                    { id: 2, name: 'Dell XPS 13', category: 'Laptops', price: 45499, stock: 8, description: 'Ultra-thin laptop with Intel i7, 16GB RAM, 512GB SSD', image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=500&h=400&fit=crop' },
+                    { id: 3, name: 'iPhone 15 Pro', category: 'Smartphones', price: 149999, stock: 12, description: 'Latest iPhone with A17 Pro chip and titanium design', image: 'https://www.google.com/imgres?q=iphone%2015%20pro&imgurl=https%3A%2F%2Fassets.swappie.com%2Fcdn-cgi%2Fimage%2Fwidth%3D600%2Cheight%3D600%2Cfit%3Dcontain%2Cformat%3Dauto%2Fswappie-iphone-15-pro-max-natural-titanium.png%3Fv%3Dbe2955d1&imgrefurl=https%3A%2F%2Fswappie.com%2Fat-en%2Fiphone%2Fiphone-15-pro-max%2Fiphone-15-pro-max-256gb-natural-titanium%2F&docid=MZo8-1Stuh3i0M&tbnid=_BdDRgEKAgC9WM&vet=12ahUKEwjXw4fCt6uQAxXg2gIHHSBzHGsQM3oECH8QAA..i&w=600&h=600&hcb=2&ved=2ahUKEwjXw4fCt6uQAxXg2gIHHSBzHGsQM3oECH8QAA' },
+                    { id: 4, name: 'Samsung Galaxy S24', category: 'Smartphones', price: 85999, stock: 20, description: 'Flagship Android phone with AI features', image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=400&fit=crop' },
+                    { id: 5, name: 'AirPods Pro', category: 'Accessories', price: 2999, stock: 3, description: 'Noise-cancelling wireless earbuds', image: 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=500&h=400&fit=crop' },
+                    { id: 6, name: 'Gaming Mouse', category: 'Accessories', price: 1299, stock: 25, description: 'High-precision gaming mouse with RGB lighting', image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&h=400&fit=crop' },
+                    { id: 7, name: 'HP Pavilion', category: 'Laptops', price: 25000, stock: 10, description: 'Budget-friendly laptop for students and professionals', image: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=500&h=400&fit=crop' },
+                    { id: 8, name: 'OnePlus 12', category: 'Smartphones', price: 33000, stock: 18, description: 'Flagship killer with premium features', image: 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=500&h=400&fit=crop' },
+                    { id: 9, name: 'Wireless Keyboard', category: 'Accessories', price: 1799, stock: 30, description: 'Mechanical wireless keyboard with backlight', image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&h=400&fit=crop' },
+                    { id: 10, name: 'USB-C Hub', category: 'Accessories', price: 2500, stock: 15, description: '7-in-1 USB-C hub with HDMI and USB ports', image: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=500&h=400&fit=crop' },
+                    { id: 11, name: 'Wireless Charger', category: 'Accessories', price: 4500, stock: 20, description: '15W fast wireless charging pad', image: 'https://images.unsplash.com/photo-1609592237737-3d78e09dac00?w=500&h=400&fit=crop' },
+                    { id: 12, name: 'Bluetooth Speaker', category: 'Accessories', price: 1500, stock: 12, description: 'Portable Bluetooth speaker with premium sound', image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&h=400&fit=crop' }
+                ],
+
+                filteredProducts: [],
+
+                init() {
+                    this.filteredProducts = [...this.products];
+                    // Load demo admin user
+                    this.user = { id: 1, name: 'Admin User', email: 'admin@techmart.co.ke', role: 'admin' };
+                    // Load demo orders
+                    this.orders = [
+                        {
+                            id: '001',
+                            date: new Date().toISOString(),
+                            status: 'delivered',
+                            customer: 'John Doe',
+                            total: 90999,
+                            address: 'Nairobi, Kenya',
+                            items: [
+                                { id: 1, name: 'MacBook Pro M3', quantity: 1 },
+                                { id: 5, name: 'AirPods Pro', quantity: 1 }
+                            ]
+                        },
+                        {
+                            id: '002',
+                            date: new Date(Date.now() - 5686802).toISOString(),
+                            status: 'processing',
+                            customer: 'Jane Smith',
+                            total: 85999,
+                            address: 'Mombasa, Kenya',
+                            items: [
+                                { id: 4, name: 'Samsung Galaxy S24', quantity: 1 }
+                            ]
+                        }
+                    ];
+                },
+
+                // Search and Filter
+                searchProducts() {
+                    this.applyFilters();
+                },
+
+                filterByCategory(category) {
+                    this.selectedCategory = category;
+                    this.currentView = 'products';
+                    this.applyFilters();
+                },
+
+                applyFilters() {
+                    let filtered = [...this.products];
+
+                    // Search filter
+                    if (this.searchQuery) {
+                        filtered = filtered.filter(product => 
+                            product.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                            product.description.toLowerCase().includes(this.searchQuery.toLowerCase())
+                        );
+                    }
+
+                    // Category filter
+                    if (this.selectedCategory) {
+                        filtered = filtered.filter(product => product.category === this.selectedCategory);
+                    }
+
+                    // Price filter
+                    filtered = filtered.filter(product => product.price <= this.priceRange.max);
+
+                    this.filteredProducts = filtered;
+                    this.sortProducts();
+                },
+
+                sortProducts() {
+                    switch (this.sortBy) {
+                        case 'price-low':
+                            this.filteredProducts.sort((a, b) => a.price - b.price);
+                            break;
+                        case 'price-high':
+                            this.filteredProducts.sort((a, b) => b.price - a.price);
+                            break;
+                        default:
+                            this.filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
+                    }
+                },
+
+                // Cart Management
+                addToCart(product) {
+                    if (product.stock === 0) return;
+                    
+                    const existingItem = this.cartItems.find(item => item.id === product.id);
+                    if (existingItem) {
+                        existingItem.quantity++;
+                    } else {
+                        this.cartItems.push({ ...product, quantity: 1 });
+                    }
+                    
+                    // Update stock
+                    const productIndex = this.products.findIndex(p => p.id === product.id);
+                    this.products[productIndex].stock--;
+                    this.applyFilters();
+                    
+                    this.showToastMessage('Product added to cart!');
+                },
+
+                removeFromCart(productId) {
+                    const itemIndex = this.cartItems.findIndex(item => item.id === productId);
+                    const item = this.cartItems[itemIndex];
+                    
+                    // Restore stock
+                    const productIndex = this.products.findIndex(p => p.id === productId);
+                    this.products[productIndex].stock += item.quantity;
+                    
+                    this.cartItems.splice(itemIndex, 1);
+                    this.applyFilters();
+                },
+
+                updateQuantity(productId, newQuantity) {
+                    if (newQuantity <= 0) {
+                        this.removeFromCart(productId);
+                        return;
+                    }
+
+                    const item = this.cartItems.find(item => item.id === productId);
+                    const product = this.products.find(p => p.id === productId);
+                    const diff = newQuantity - item.quantity;
+
+                    if (diff > 0 && product.stock < diff) {
+                        this.showToastMessage('Not enough stock available!');
+                        return;
+                    }
+
+                    item.quantity = newQuantity;
+                    product.stock -= diff;
+                    this.applyFilters();
+                },
+
+                getCartTotal() {
+                    return this.cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+                },
+
+                proceedToCheckout() {
+                    if (!this.user) {
+                        this.showLogin = true;
+                        return;
+                    }
+                    this.showCheckout = true;
+                },
+
+                completeOrder() {
+                    const order = {
+                        id: String(this.orders.length + 1).padStart(3, '0'),
+                        date: new Date().toISOString(),
+                        status: 'pending',
+                        customer: this.checkoutForm.name,
+                        total: this.getCartTotal() + 500,
+                        address: this.checkoutForm.address,
+                        items: [...this.cartItems]
+                    };
+
+                    this.orders.unshift(order);
+                    this.cartItems = [];
+                    this.showCheckout = false;
+                    this.currentView = 'orders';
+                    this.showToastMessage('Order placed successfully!');
+                    
+                    // Reset form
+                    this.checkoutForm = { name: '', phone: '', address: '', payment: '' };
+                },
+
+                // Authentication
+                login() {
+                    // Demo login
+                    this.user = { 
+                        id: 1, 
+                        name: this.loginForm.email === 'admin@techmart.co.ke' ? 'Admin User' : 'Regular User', 
+                        email: this.loginForm.email,
+                        role: this.loginForm.email === 'admin@techmart.co.ke' ? 'admin' : 'user'
+                    };
+                    this.showLogin = false;
+                    this.showToastMessage('Login successful!');
+                    this.loginForm = { email: '', password: '' };
+                },
+
+                register() {
+                    // Demo registration
+                    this.user = { 
+                        id: Date.now(), 
+                        name: this.registerForm.name, 
+                        email: this.registerForm.email,
+                        role: 'user'
+                    };
+                    this.showRegister = false;
+                    this.showToastMessage('Registration successful!');
+                    this.registerForm = { name: '', email: '', password: '' };
+                },
+
+                logout() {
+                    this.user = null;
+                    this.cartItems = [];
+                    this.currentView = 'home';
+                    this.showToastMessage('Logged out successfully!');
+                },
+
+                // Admin Functions
+                addProduct() {
+                    const newProduct = {
+                        id: Math.max(...this.products.map(p => p.id)) + 1,
+                        name: this.productForm.name,
+                        category: this.productForm.category,
+                        price: parseInt(this.productForm.price),
+                        stock: parseInt(this.productForm.stock),
+                        description: this.productForm.description,
+                        image: this.productForm.image || 'https://www.google.com/imgres?q=iphone%2015%20pro&imgurl=https%3A%2F%2Fassets.swappie.com%2Fcdn-cgi%2Fimage%2Fwidth%3D600%2Cheight%3D600%2Cfit%3Dcontain%2Cformat%3Dauto%2Fswappie-iphone-15-pro-max-natural-titanium.png%3Fv%3Dbe2955d1&imgrefurl=https%3A%2F%2Fswappie.com%2Fat-en%2Fiphone%2Fiphone-15-pro-max%2Fiphone-15-pro-max-256gb-natural-titanium%2F&docid=MZo8-1Stuh3i0M&tbnid=_BdDRgEKAgC9WM&vet=12ahUKEwjXw4fCt6uQAxXg2gIHHSBzHGsQM3oECH8QAA..i&w=600&h=600&hcb=2&ved=2ahUKEwjXw4fCt6uQAxXg2gIHHSBzHGsQM3oECH8QAA'
+                    };
+
+                    this.products.push(newProduct);
+                    this.applyFilters();
+                    this.showAddProduct = false;
+                    this.showToastMessage('Product added successfully!');
+                    this.productForm = { name: '', category: '', price: '', stock: '', description: '', image: '' };
+                },
+
+                editProduct(product) {
+                    this.productForm = { ...product };
+                    this.showAddProduct = true;
+                },
+
+                deleteProduct(productId) {
+                    this.products = this.products.filter(p => p.id !== productId);
+                    this.applyFilters();
+                    this.showToastMessage('Product deleted successfully!');
+                },
+
+                updateOrderStatus(orderId, newStatus) {
+                    const order = this.orders.find(o => o.id === orderId);
+                    if (order) {
+                        order.status = newStatus;
+                        this.showToastMessage('Order status updated!');
+                    }
+                },
+
+                getTotalRevenue() {
+                    return this.orders.reduce((total, order) => total + order.total, 0);
+                },
+
+                // Utility Functions
+                showToastMessage(message) {
+                    this.toastMessage = message;
+                    this.showToast = true;
+                    setTimeout(() => {
+                        this.showToast = false;
+                    }, 3000);
+                },
+
+                showConfirmDialog(message) {
+                    // Using a simple confirm for demo - in production, use a custom modal
+                    return true; // Simplified for demo
+                }
+            };
+        }
+    </script>
+</body>
+</html>
